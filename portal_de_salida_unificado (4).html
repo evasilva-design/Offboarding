@@ -1,0 +1,1658 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Portal de Salida Unificado - Assetplan</title>
+  <!-- Tailwind CSS para el motor de diseño -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#f0f6ff',
+              100: '#e0edff',
+              200: '#bcd7ff',
+              500: '#1d4ed8', /* Azul Corporativo Assetplan */
+              600: '#1e40af',
+              700: '#1d4ed8',
+              800: '#1e3a8a',
+              900: '#172554',
+              950: '#0f172a',
+            }
+          },
+          fontFamily: {
+            sans: ['Plus Jakarta Sans', 'sans-serif'],
+          }
+        }
+      }
+    }
+  </script>
+  <!-- Google Font Plus Jakarta Sans para máxima legibilidad -->
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+    }
+    .custom-scrollbar::-webkit-scrollbar {
+      width: 6px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-track {
+      background: #f1f5f9;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 3px;
+    }
+    .chat-bubble-user {
+      border-bottom-right-radius: 2px;
+    }
+    .chat-bubble-bot {
+      border-bottom-left-radius: 2px;
+    }
+  </style>
+</head>
+<body class="bg-slate-50 min-h-screen flex flex-col overflow-x-hidden">
+
+  <!-- ========================================== -->
+  <!-- BARRA DEL SIMULADOR: Herramienta pedagógica interactiva -->
+  <!-- ========================================== -->
+  <div class="bg-slate-950 text-white p-3 shadow-md z-30 border-b border-slate-800">
+    <div class="max-w-7xl mx-auto flex flex-col lg:flex-row items-center justify-between gap-4">
+      <div>
+        <span class="text-xs font-bold text-amber-400 tracking-wider uppercase">Prototipo de Interfaz: Offboarding Unificado Premium</span>
+        <h1 class="text-[11px] text-slate-300 font-medium">Prueba la interactividad del flujo. Modifica fechas, simula el estado de entrega o activa la alerta de proceso incompleto.</h1>
+      </div>
+      <div class="flex flex-wrap gap-2">
+        <button onclick="resetFlow()" class="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-[10px] font-bold transition-all text-slate-200">
+          🏠 Resetear Proceso
+        </button>
+        <button onclick="forceScenario('con-cargo')" class="px-2.5 py-1 rounded bg-amber-600 hover:bg-amber-500 text-[10px] font-bold transition-all text-white">
+          📅 Simular Aviso Tardío (Con Cargo)
+        </button>
+        <button onclick="simulateIncompleteProcess()" class="px-2.5 py-1 rounded bg-rose-600 hover:bg-rose-500 text-[10px] font-bold transition-all text-white animate-pulse">
+          ⚠️ Simular Proceso Incompleto (Abandono)
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- CONTENEDOR PRINCIPAL DEL SITIO -->
+  <div class="flex-1 flex flex-col md:flex-row">
+    
+    <!-- SIDEBAR: Réplica del panel de Assetplan -->
+    <aside class="w-full md:w-64 bg-brand-950 text-slate-100 flex-shrink-0 flex flex-col">
+      <div class="p-6 border-b border-slate-800 flex items-center justify-between">
+        <div class="flex items-center gap-2.5">
+          <div class="w-8 h-8 rounded-lg bg-white text-brand-950 flex items-center justify-center font-extrabold text-lg shadow-sm">▲</div>
+          <span class="font-bold tracking-tight text-lg">asset<span class="text-blue-400">plan</span></span>
+        </div>
+      </div>
+      
+      <nav class="p-4 space-y-1 flex-1">
+        <button onclick="goToHome()" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-slate-300 hover:bg-white/5 transition-colors text-left">
+          🏠 Inicio
+        </button>
+        <a href="#" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-slate-300 hover:bg-white/5 transition-colors">
+          💳 Mis pagos
+        </a>
+        <a href="#" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-slate-300 hover:bg-white/5 transition-colors">
+          📄 Contratos
+        </a>
+        <button id="sidebar-dejar-arrendar-btn" onclick="clickDejarArrendar()" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm bg-brand-700 text-white font-semibold shadow-md text-left transition-all hover:bg-brand-600">
+          🚚 Dejar de arrendar
+        </button>
+      </nav>
+
+      <!-- Perfil del usuario -->
+      <div class="p-4 border-t border-slate-800 flex items-center gap-3 bg-brand-950/40">
+        <div class="w-9 h-9 rounded-full bg-slate-300 overflow-hidden ring-2 ring-white/20">
+          <img src="https://placehold.co/100x100/1d4ed8/ffffff?text=PS" alt="Pedro Santana" class="w-full h-full object-cover">
+        </div>
+        <div class="overflow-hidden">
+          <p class="text-xs font-bold text-white truncate">Pedro Santana</p>
+          <p class="text-[10px] text-slate-400 truncate">Arrendatario - Depto 1004</p>
+        </div>
+      </div>
+    </aside>
+
+    <!-- ÁREA DE CONTENIDO DINÁMICO -->
+    <main class="flex-1 p-4 md:p-8 space-y-6 max-w-5xl mx-auto w-full overflow-y-auto">
+
+      <!-- ========================================== -->
+      <!-- VIEWPORT 1: HOME/DASHBOARD PRINCIPAL -->
+      <!-- ========================================== -->
+      <section id="viewport-home" class="block space-y-6">
+        <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+          <div class="flex flex-col gap-1">
+            <h2 class="text-xl font-extrabold text-slate-800">Hola Pedro Santana 👋</h2>
+            <p class="text-xs text-slate-400">Te damos la bienvenida a tu cuenta de arrendatario</p>
+          </div>
+          <!-- Video Explainer Banner -->
+          <div onclick="openVideoModal()" class="flex items-center gap-2 bg-brand-50 border border-brand-200 hover:bg-brand-100/50 cursor-pointer px-3 py-1.5 rounded-xl transition-all">
+            <span class="text-lg">🎬</span>
+            <span class="text-xs font-bold text-brand-700">Video: Cómo funciona tu salida</span>
+          </div>
+        </div>
+
+        <!-- BARRA HORIZONTAL DE ADVERTENCIA DE SALIDA (RÉPLICA DE LA CAPTURA 11.01.16) -->
+        <div id="home-exit-banner" class="hidden bg-blue-50 border border-blue-200 rounded-xl p-4 flex flex-col sm:flex-row justify-between items-center gap-3 transition-all duration-300">
+          <div class="flex items-center gap-3">
+            <span class="text-xl">🚚</span>
+            <div>
+              <p class="text-xs font-bold text-brand-950 flex items-center gap-1.5">
+                Dejarás de arrendar el <span id="banner-exit-date-label" class="font-extrabold text-brand-700">DD-MM-AAAA</span>
+              </p>
+              <p class="text-[10px] text-slate-500 font-medium">Departamento 1004 • ID de Contrato #45920</p>
+            </div>
+          </div>
+          <div class="flex items-center gap-3 shrink-0">
+            <!-- Badge dinámico de cargo o abandono -->
+            <div id="banner-status-badge" class="hidden items-center gap-1.5 bg-rose-50 text-rose-700 text-[10px] font-extrabold px-3 py-1 rounded-full border border-rose-200">
+              <span class="w-1.5 h-1.5 rounded-full bg-rose-500 animate-ping"></span>
+              <span id="banner-status-text">Se aplicarán cargos de preaviso. Revísalos</span>
+            </div>
+            <button id="banner-action-btn" onclick="resumeOffboardingFlow()" class="text-xs font-bold text-brand-700 hover:text-brand-800 underline">
+              Editar o cancelar
+            </button>
+          </div>
+        </div>
+
+        <!-- TARJETA PRINCIPAL DEL DEPARTAMENTO -->
+        <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
+          <div class="bg-brand-700 text-white px-5 py-3 font-bold text-xs flex justify-between items-center">
+            <span>Departamento 1004</span>
+            <span class="text-[10px] bg-white/10 px-2 py-0.5 rounded">Vigente</span>
+          </div>
+          <div class="p-6 grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
+            <div class="md:col-span-4 space-y-1">
+              <p class="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Por pagar</p>
+              <p class="text-3xl font-extrabold text-slate-800">$ 240.000</p>
+              <div class="pt-3 flex gap-2">
+                <button class="px-5 py-2 bg-brand-700 hover:bg-brand-800 text-white text-xs font-bold rounded-lg shadow-xs transition-all">Pagar</button>
+                <button onclick="clickDejarArrendar()" id="home-dejar-arrendar-cta" class="px-4 py-2 border border-slate-200 hover:bg-slate-50 text-xs font-bold rounded-lg transition-all text-slate-600">Dejar de arrendar</button>
+              </div>
+            </div>
+            <div class="md:col-span-5 space-y-2 text-xs border-y md:border-y-0 md:border-x border-slate-100 py-4 md:py-0 md:px-6">
+              <div class="flex justify-between">
+                <span class="text-slate-400">Mi contrato</span>
+                <span class="text-brand-700 font-bold cursor-pointer hover:underline">🔄 Cambiar</span>
+              </div>
+              <div class="flex justify-between text-slate-600">
+                <span>Dormitorios:</span> <strong class="text-slate-800">1</strong>
+              </div>
+              <div class="flex justify-between text-slate-600">
+                <span>Baños:</span> <strong class="text-slate-800">1</strong>
+              </div>
+              <div class="flex justify-between text-slate-600">
+                <span>Inicio contrato:</span> <strong class="text-slate-800">16/06/2022</strong>
+              </div>
+              <div class="flex justify-between text-slate-600">
+                <span>Fin contrato:</span> <strong class="text-slate-800">15/06/2026</strong>
+              </div>
+            </div>
+            <div class="md:col-span-3 space-y-3">
+              <div class="bg-amber-50 border border-amber-200/60 rounded-xl p-3 text-[10px] text-amber-800 space-y-1 leading-relaxed">
+                <p class="font-bold flex items-center gap-1">📢 Reajuste Contractual</p>
+                <p>Tu arriendo se reajustará por primera vez en <strong>junio de 2026</strong> y luego cada 3 meses.</p>
+              </div>
+              <button class="w-full py-2 bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-500 rounded-lg text-[10px] font-bold transition-all flex items-center justify-center gap-1">
+                📥 Descargar contrato PDF
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- SECCIÓN PROPIEDADES -->
+        <div class="space-y-3">
+          <h3 class="text-xs font-bold text-slate-600 uppercase tracking-wider">Propiedades</h3>
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div class="bg-white border border-slate-200 rounded-xl p-4 flex items-center gap-3.5 shadow-xs">
+              <div class="w-10 h-10 rounded-lg bg-blue-50 text-brand-700 flex items-center justify-center text-lg">🏢</div>
+              <div class="text-xs">
+                <p class="font-bold text-slate-700">Departamento</p>
+                <p class="text-slate-400 mt-0.5">OP: 13540 • Unidad: 1104</p>
+                <p class="font-bold text-brand-700 mt-1">$1.015.000 / mes</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- SECCIÓN SERVICIOS BÁSICOS -->
+        <div class="space-y-3">
+          <h3 class="text-xs font-bold text-slate-600 uppercase tracking-wider">Servicios básicos</h3>
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <!-- Gas -->
+            <div class="bg-white border border-slate-200 rounded-xl p-4 space-y-3 shadow-xs">
+              <div class="flex items-center gap-2">
+                <span class="text-lg">🔥</span>
+                <div>
+                  <p class="text-xs font-bold text-slate-700">Gas</p>
+                  <p class="text-[9px] text-slate-400">Metrogas</p>
+                </div>
+              </div>
+              <div class="text-[11px] text-slate-600 space-y-1">
+                <div class="flex justify-between"><span>Deuda actual:</span><strong class="text-slate-800">$ 35.000</strong></div>
+                <div class="flex justify-between"><span>Último pago:</span><span>10/05/2022</span></div>
+              </div>
+            </div>
+            <!-- Luz -->
+            <div class="bg-white border border-slate-200 rounded-xl p-4 space-y-3 shadow-xs">
+              <div class="flex items-center gap-2">
+                <span class="text-lg">💡</span>
+                <div>
+                  <p class="text-xs font-bold text-slate-700">Luz</p>
+                  <p class="text-[9px] text-slate-400">Enel</p>
+                </div>
+              </div>
+              <div class="text-[11px] text-slate-600 space-y-1">
+                <div class="flex justify-between"><span>Deuda actual:</span><strong class="text-slate-800">$ 15.500</strong></div>
+                <div class="flex justify-between"><span>Último pago:</span><span>10/05/2022</span></div>
+              </div>
+            </div>
+            <!-- Agua -->
+            <div class="bg-white border border-slate-200 rounded-xl p-4 space-y-3 shadow-xs">
+              <div class="flex items-center gap-2">
+                <span class="text-lg">💧</span>
+                <div>
+                  <p class="text-xs font-bold text-slate-700">Agua</p>
+                  <p class="text-[9px] text-slate-400">Aguas Andinas</p>
+                </div>
+              </div>
+              <div class="text-[11px] text-slate-600 space-y-1">
+                <div class="flex justify-between"><span>Deuda actual:</span><strong class="text-slate-800">$ 0</strong></div>
+                <div class="flex justify-between"><span>Último pago:</span><span>10/05/2022</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ========================================== -->
+      <!-- CONTENEDOR CENTRAL DE OFFBOARDING CON STEPPER UNIFICADO -->
+      <!-- ========================================== -->
+      <section id="offboarding-central-container" class="hidden space-y-6">
+        
+        <!-- STEPPER HORIZONTAL UNIFICADO -->
+        <div class="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-sm">
+          <div class="relative flex items-center justify-between w-full max-w-3xl mx-auto">
+            <div class="absolute left-0 right-0 top-1/2 -translate-y-1/2 h-[2px] bg-slate-100 -z-0"></div>
+            <div id="master-progress-line" class="absolute left-0 top-1/2 -translate-y-1/2 h-[2px] bg-brand-700 -z-0 transition-all duration-500" style="width: 0%;"></div>
+
+            <!-- Paso 1: Notificar Salida -->
+            <div class="relative z-10 flex flex-col items-center">
+              <div id="m-step-node-1" class="w-8 h-8 rounded-full bg-brand-100 border-2 border-brand-700 text-brand-700 flex items-center justify-center font-bold text-xs shadow-md transition-all duration-300">1</div>
+              <p id="m-step-title-1" class="text-[11px] font-bold text-brand-700 mt-2">1. Notificar salida</p>
+            </div>
+
+            <!-- Paso 2: Salvo conducto -->
+            <div class="relative z-10 flex flex-col items-center">
+              <div id="m-step-node-2" class="w-8 h-8 rounded-full bg-white border border-slate-200 text-slate-400 flex items-center justify-center font-semibold text-xs shadow-sm transition-all duration-300">2</div>
+              <p id="m-step-title-2" class="text-[11px] font-semibold text-slate-400 mt-2">2. Salvo conducto</p>
+            </div>
+
+            <!-- Paso 3: Checkout -->
+            <div class="relative z-10 flex flex-col items-center">
+              <div id="m-step-node-3" class="w-8 h-8 rounded-full bg-white border border-slate-200 text-slate-400 flex items-center justify-center font-semibold text-xs shadow-sm transition-all duration-300">3</div>
+              <p id="m-step-title-3" class="text-[11px] font-semibold text-slate-400 mt-2">3. Checkout</p>
+            </div>
+
+            <!-- Paso 4: Liquidación -->
+            <div class="relative z-10 flex flex-col items-center">
+              <div id="m-step-node-4" class="w-8 h-8 rounded-full bg-white border border-slate-200 text-slate-400 flex items-center justify-center font-semibold text-xs shadow-sm transition-all duration-300">4</div>
+              <p id="m-step-title-4" class="text-[11px] font-semibold text-slate-400 mt-2">4. Liquidación</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- ========================================== -->
+        <!-- PANTALLA PASO 1: FORMULARIO DE AVISO -->
+        <!-- ========================================== -->
+        <div id="step-container-1" class="block bg-white rounded-2xl border border-slate-200/80 p-6 md:p-8 shadow-sm space-y-6">
+          <div class="flex items-start gap-3">
+            <span class="text-xl">🚚</span>
+            <div>
+              <h2 class="text-base font-bold text-slate-800">¡Planifica tu salida con calma!</h2>
+              <p class="text-xs text-slate-500 mt-0.5">Completa la información para iniciar tu proceso. Puedes editar o cancelar esta solicitud en cualquier momento antes de tu fecha de salida.</p>
+            </div>
+          </div>
+
+          <hr class="border-slate-100">
+
+          <div class="space-y-4">
+            <div>
+              <label class="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-2">Propiedad que dejarás de arrendar</label>
+              <div class="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-1.5 text-xs text-slate-700">
+                <p class="font-bold flex items-center gap-1.5">🏠 Departamento 1004</p>
+                <p class="text-slate-500 pl-4">↳ Bodega 56</p>
+                <p class="text-slate-500 pl-4">↳ Estacionamiento 108</p>
+              </div>
+            </div>
+
+            <!-- Motivos de Salida -->
+            <div>
+              <label class="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-2">¿Por qué dejarás de arrendar?</label>
+              <button onclick="openMotivosModal()" class="w-full text-left bg-white border border-slate-200 rounded-xl px-4 py-3 text-xs text-slate-700 font-medium hover:border-brand-700 transition-all flex justify-between items-center">
+                <span id="motivo-seleccionado-text" class="text-slate-400">Selecciona uno o más motivos para ayudarnos a mejorar...</span>
+                <span class="text-slate-400">✏️</span>
+              </button>
+            </div>
+
+            <!-- Selector de Fecha de Salida con Evaluación de Cargo en vivo -->
+            <div>
+              <label class="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-2">Último día de arriendo</label>
+              <input type="date" id="exit-date-input" onchange="evaluateExitDateInput()" class="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-xs text-slate-700 font-bold focus:ring-2 focus:ring-brand-700">
+              <p class="text-[10px] text-slate-400 mt-1.5">Recuerda devolver las llaves físicas a más tardar este día antes de las 16:00 hrs.</p>
+            </div>
+
+            <!-- Alerta de Escenario: Sin Cargo -->
+            <div id="step-1-banner-ok" class="block bg-emerald-50 border border-emerald-150 rounded-xl p-4 transition-all">
+              <div class="flex items-start gap-3">
+                <div class="w-5 h-5 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center text-xs shrink-0 font-bold">✓</div>
+                <div>
+                  <h4 class="text-xs font-bold text-emerald-800">¡Súper! Notificación dentro de los plazos contractuales</h4>
+                  <p class="text-[11px] text-emerald-700 mt-1">Estás dando aviso de salida con 60 días o más de anticipación. No se generará cargo por aviso fuera de plazo.</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Alerta de Escenario: Con Cargo -->
+            <div id="step-1-banner-error" class="hidden bg-amber-50 border border-amber-200 rounded-xl p-4.5 space-y-3 transition-all">
+              <div class="flex items-start gap-3">
+                <div class="w-5 h-5 rounded-full bg-amber-100 text-amber-700 flex items-center justify-center text-xs shrink-0 font-bold">⚠️</div>
+                <div class="flex-1">
+                  <div class="flex justify-between items-center">
+                    <h4 class="text-xs font-bold text-amber-900">Aviso fuera del plazo (Cargo Estimado)</h4>
+                    <span class="text-[9px] bg-amber-100 border border-amber-200 text-amber-800 px-2 rounded-full font-bold">Cargo de preaviso</span>
+                  </div>
+                  <p class="text-[11px] text-amber-800 mt-1">Tu contrato estipula un aviso mínimo de 60 días. Al elegir esta fecha, estás dando aviso con menor preaviso. Se calculará un cargo estimado proporcional por los días faltantes.</p>
+                </div>
+              </div>
+              <!-- Botón de sugerencia UX de ahorro -->
+              <div class="bg-white/80 rounded-lg p-3 border border-amber-200/50 text-[10px] text-slate-700 space-y-1">
+                <div class="flex justify-between"><span>Días de retraso acumulados:</span><strong id="fine-days-label">30 días</strong></div>
+                <div class="flex justify-between font-bold text-amber-950 border-t border-slate-100 pt-1"><span>Cargo Estimado Proporcional:</span><span id="fine-amount-label">$230.000</span></div>
+                <div class="pt-2 text-[10px] text-blue-700 font-medium">
+                  💡 Tip de ahorro: Si corres tu fecha de salida al <button onclick="setOptimalExitDate()" class="underline font-bold text-blue-800 hover:text-brand-700">31 de Agosto de 2026</button>, ¡este cargo se reduce a <strong>$0</strong>!
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Navegación -->
+          <div class="flex justify-between items-center pt-4 border-t border-slate-100">
+            <button onclick="goToHome()" class="px-4 py-2 border border-slate-200 rounded-lg text-xs font-bold text-slate-500 hover:bg-slate-50">Cancelar</button>
+            <button onclick="handleStep1Submit()" class="px-5 py-2.5 rounded-lg bg-brand-700 hover:bg-brand-800 text-white font-bold text-xs shadow-md transition-all">
+              Continuar a Confirmación
+            </button>
+          </div>
+        </div>
+
+        <!-- ========================================== -->
+        <!-- PANTALLA PASO 2: SALVOCONDUCTO & SIMULACIÓN DE LIQUIDACIÓN -->
+        <!-- ========================================== -->
+        <div id="step-container-2" class="hidden bg-white rounded-2xl border border-slate-200/80 p-6 md:p-8 shadow-sm space-y-6">
+          <div class="flex items-start justify-between flex-wrap gap-4">
+            <div class="flex items-start gap-3">
+              <span class="text-xl">📄</span>
+              <div>
+                <span class="text-[9px] bg-brand-100 text-brand-800 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">Fase de Autorización</span>
+                <h2 class="text-base font-bold text-slate-800 mt-1">Obtén tu Salvoconducto de Mudanza</h2>
+                <p class="text-xs text-slate-500 mt-0.5">La administración de la copropiedad exige validar tu estado de deuda $0 en consumos para autorizar el camión de mudanza.</p>
+              </div>
+            </div>
+            <button onclick="openEditarModal()" class="px-4 py-2 border border-slate-200 hover:bg-slate-50 rounded-lg text-xs font-bold text-slate-600 transition-all">
+              ⚙️ Modificar mi fecha de salida
+            </button>
+          </div>
+
+          <hr class="border-slate-100">
+
+          <!-- DEFINICIÓN DIDÁCTICA DEL PRORRATEO -->
+          <div class="bg-blue-50/70 border border-blue-150 rounded-2xl p-4.5 space-y-2">
+            <h4 class="text-xs font-extrabold text-blue-900 flex items-center gap-1.5">
+              <span>💡</span> ¿Qué es el prorrateo de tus gastos?
+            </h4>
+            <p class="text-[11px] text-blue-800 leading-relaxed font-medium">
+              Corresponde al <strong>cobro proporcional calculado únicamente por los días exactos que habitaste la unidad en tu último mes</strong> de contrato, antes de la entrega real. Esto te protege de pagar consumos de periodos en los que ya no estarás en el departamento.
+            </p>
+          </div>
+
+          <!-- DESGLOSE DE CONSUMOS EN GRID -->
+          <div class="space-y-4">
+            <h3 class="text-xs font-bold text-slate-600 uppercase tracking-wider">Detalle del cálculo de consumos preventivos</h3>
+            
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <!-- Luz -->
+              <div class="border border-slate-200 rounded-xl p-4 bg-slate-50 flex flex-col justify-between">
+                <div>
+                  <div class="flex justify-between items-center">
+                    <span class="text-xs font-bold text-slate-800">⚡ Luz (Enel)</span>
+                    <strong class="text-xs font-bold text-brand-700">$15.500</strong>
+                  </div>
+                  <p class="text-[10px] text-slate-400 mt-1 leading-normal">Prorrateo proporcional promedio últimos 3 meses.</p>
+                </div>
+                <span class="text-[9px] bg-white border border-slate-150 py-1 px-2 rounded-md font-mono text-slate-500 mt-3 text-center">($31.000 / 30) × 15 días</span>
+              </div>
+
+              <!-- Agua -->
+              <div class="border border-slate-200 rounded-xl p-4 bg-slate-50 flex flex-col justify-between">
+                <div>
+                  <div class="flex justify-between items-center">
+                    <span class="text-xs font-bold text-slate-800">💧 Agua (Aguas Andinas)</span>
+                    <strong class="text-xs font-bold text-brand-700">$12.000</strong>
+                  </div>
+                  <p class="text-[10px] text-slate-400 mt-1 leading-normal">Prorrateo diario estimado según tu historial real.</p>
+                </div>
+                <span class="text-[9px] bg-white border border-slate-150 py-1 px-2 rounded-md font-mono text-slate-500 mt-3 text-center">($24.000 / 30) × 15 días</span>
+              </div>
+
+              <!-- Caldera (Interactivo) -->
+              <div class="border border-brand-500/20 rounded-xl p-4 bg-brand-50/20 flex flex-col justify-between relative overflow-hidden">
+                <span class="absolute top-0 right-0 bg-brand-700 text-white text-[8px] font-bold uppercase px-2 py-0.5 rounded-bl-lg">Lectura Real</span>
+                <div>
+                  <div class="flex justify-between items-center">
+                    <span class="text-xs font-bold text-slate-800">🔥 Caldera (Agua Caliente)</span>
+                    <strong class="text-xs font-bold text-brand-700" id="step2-caldera-val">$45.000</strong>
+                  </div>
+                  <p class="text-[10px] text-slate-400 mt-1 leading-normal">Ingresa tus m³ actuales para calcular el consumo.</p>
+                </div>
+                <div class="mt-2.5 flex items-center gap-1.5">
+                  <input type="number" id="step2-caldera-input" oninput="recalculateCalderaStep2()" value="130" class="w-full bg-white border border-slate-200 focus:border-brand-700 focus:ring-1 focus:ring-brand-700 rounded px-2 py-1 text-[11px] font-bold text-slate-700">
+                  <span class="text-[9px] text-slate-500 font-bold">m³</span>
+                </div>
+                <span class="text-[9px] text-slate-450 block mt-1.5">*Anterior registrado: <strong>120 m³</strong></span>
+              </div>
+
+              <!-- Gastos Comunes (GGCC) -->
+              <div class="border border-slate-200 rounded-xl p-4 bg-slate-50 flex flex-col justify-between">
+                <div>
+                  <div class="flex justify-between items-center">
+                    <span class="text-xs font-bold text-slate-800">🏢 GGCC Edificio</span>
+                    <strong class="text-xs font-bold text-brand-700">$40.000</strong>
+                  </div>
+                  <p class="text-[10px] text-slate-400 mt-1 leading-normal">Prorrateo proporcional del mes en curso.</p>
+                </div>
+                <span class="text-[9px] bg-white border border-slate-150 py-1 px-2 rounded-md font-mono text-slate-500 mt-3 text-center">($80.000 / 30) × 15 días</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- SECCIÓN DE SIMULACIÓN DE LIQUIDACIÓN AVANZADA (PEDIDO DE SEBASTIÁN) -->
+          <div class="bg-slate-50 border border-slate-200 rounded-2xl p-5 md:p-6 space-y-4">
+            <div class="flex justify-between items-center flex-wrap gap-2">
+              <h3 class="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+                <span>💰</span> Simulador de Devolución de Garantía
+              </h3>
+              <span class="text-[10px] bg-brand-100 text-brand-800 px-2.5 py-0.5 rounded-full font-bold">Mi Garantía: $1.015.000</span>
+            </div>
+            
+            <p class="text-[11px] text-slate-500 leading-relaxed">
+              Descubre cuánto dinero de tu garantía recibirás de vuelta en base al estado de entrega del departamento y las cuentas del mes.
+            </p>
+
+            <div class="grid grid-cols-1 md:grid-cols-12 gap-6 pt-2">
+              <!-- Selector de estado de depto -->
+              <div class="md:col-span-5 space-y-3">
+                <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">1. ¿En qué estado entregarás el depto?</label>
+                <div class="grid grid-cols-3 gap-2">
+                  <button onclick="setSimState('excellent')" id="sim-state-excellent" class="py-2.5 border border-brand-700 bg-brand-50/50 text-brand-700 font-bold rounded-xl text-center text-[10px] flex flex-col items-center gap-1 hover:bg-brand-50 transition-colors">
+                    <span>✨</span> Excelente
+                  </button>
+                  <button onclick="setSimState('minor')" id="sim-state-minor" class="py-2.5 border border-slate-200 text-slate-600 rounded-xl text-center text-[10px] flex flex-col items-center gap-1 hover:bg-slate-100 transition-colors">
+                    <span>🩹</span> Desgastes Leves
+                  </button>
+                  <button onclick="setSimState('damaged')" id="sim-state-damaged" class="py-2.5 border border-slate-200 text-slate-600 rounded-xl text-center text-[10px] flex flex-col items-center gap-1 hover:bg-slate-100 transition-colors">
+                    <span>⚠️</span> Con Daños
+                  </button>
+                </div>
+
+                <!-- Record de Check-in (Pedido Sebastián) -->
+                <div class="bg-white border border-slate-200 rounded-xl p-3 space-y-2 text-[10px]">
+                  <p class="font-bold text-slate-700 border-b pb-1 flex justify-between">
+                    <span>📋 Historial de Check-In</span>
+                    <span class="text-blue-600">Ver fotos originales</span>
+                  </p>
+                  <div class="space-y-1 text-slate-500">
+                    <div class="flex justify-between"><span>Pintura Muros:</span><span class="text-emerald-600 font-bold">Impecable</span></div>
+                    <div class="flex justify-between"><span>Ventanas y Vidrios:</span><span class="text-emerald-600 font-bold">Sin detalles</span></div>
+                    <div class="flex justify-between"><span>Piso flotante:</span><span class="text-amber-600 font-bold">Leve rayón cocina</span></div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Tips tempranos de reparación -->
+              <div class="md:col-span-4 space-y-3 bg-white p-4 rounded-xl border border-slate-200">
+                <p class="text-[10px] font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1">
+                  <span>💡</span> Tips de Reparación Temprana
+                </p>
+                <ul class="text-[10px] text-slate-500 space-y-1.5 list-disc pl-3">
+                  <li><strong>Limpia manchas leves:</strong> Una esponja mágica en los muros de la sala puede salvarte de un cargo de pintura.</li>
+                  <li><strong>Ampolletas Quemadas:</strong> Cambia todos los focos defectuosos antes del Checkout; es un cobro recurrente.</li>
+                  <li><strong>Cierra agujeros:</strong> Tapa con masilla rápida los agujeros de clavos que hayas hecho.</li>
+                </ul>
+              </div>
+
+              <!-- Proyección total de devolución -->
+              <div class="md:col-span-3 bg-brand-50/50 border border-brand-100 rounded-xl p-4 flex flex-col justify-between">
+                <div class="space-y-1 text-[10px]">
+                  <p class="font-bold text-brand-800">Resultado de Simulación</p>
+                  <div class="flex justify-between text-slate-500 pt-1"><span>Mi Depósito:</span><span>$1.015.000</span></div>
+                  <div class="flex justify-between text-slate-500"><span>Consumos:</span><span id="sim-consumos-val">-$112.500</span></div>
+                  <div class="flex justify-between text-slate-500"><span>Cargos de Aviso:</span><span id="sim-cargos-val">-$0</span></div>
+                  <div class="flex justify-between text-slate-500"><span>Descuento Reparaciones:</span><span id="sim-rep-val" class="text-slate-600">-$0</span></div>
+                </div>
+                <div class="border-t pt-2 mt-2">
+                  <p class="text-[9px] text-slate-400 font-bold uppercase">Devolución Estimada</p>
+                  <p class="text-lg font-extrabold text-brand-700" id="sim-net-return">$902.500</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Totalizador de Consumos y botón de liberación -->
+          <div class="bg-brand-50 border border-brand-100 rounded-2xl p-5 flex flex-col md:flex-row justify-between items-center gap-4">
+            <div class="space-y-1">
+              <span class="text-[9px] bg-brand-100 text-brand-800 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">Total Consumos & Gastos Cierre</span>
+              <p class="text-2xl font-extrabold text-brand-900 mt-1.5" id="step2-grand-total-amount">$112.500</p>
+              <p id="step2-fine-breakdown-text" class="hidden text-[10px] text-rose-700 font-semibold leading-relaxed">
+                ⚠️ Incluye cobro proporcional por aviso tardío: + $230.000
+              </p>
+            </div>
+            <button onclick="payConsumosProyectados()" id="step2-pay-cta" class="w-full md:w-auto px-5 py-3 bg-brand-700 hover:bg-brand-800 text-white font-bold text-xs rounded-xl shadow-md transition-all shrink-0">
+              💳 Saldar consumos y liberar SC
+            </button>
+          </div>
+
+          <!-- DOCUMENTACIÓN DE MUDANZA -->
+          <div class="border border-slate-200 rounded-2xl p-5 space-y-3">
+            <h4 class="text-xs font-bold text-slate-600 uppercase tracking-wider">Documentación de Mudanza</h4>
+            
+            <div id="step2-sc-locked-box" class="flex flex-col sm:flex-row justify-between items-center p-4 bg-slate-50 rounded-xl border border-dashed border-slate-200 gap-4">
+              <div class="flex items-center gap-3">
+                <span class="text-2xl">🔒</span>
+                <div>
+                  <p class="text-xs font-bold text-slate-700">Salvoconducto_Mudanza_1004.pdf</p>
+                  <p class="text-[10px] text-slate-400">Bloqueado hasta saldar las deudas proporcionales estimadas para certificar Deuda $0.</p>
+                </div>
+              </div>
+              <button disabled class="px-4 py-2 bg-slate-200 text-slate-400 font-bold text-xs rounded-lg cursor-not-allowed">Descargar Certificado</button>
+            </div>
+
+            <div id="step2-sc-unlocked-box" class="hidden flex-col sm:flex-row justify-between items-center p-4 bg-emerald-50 rounded-xl border border-emerald-200 gap-4 transition-all duration-300">
+              <div class="flex items-center gap-3">
+                <span class="text-2xl">✓</span>
+                <div>
+                  <p class="text-xs font-bold text-emerald-800">Salvoconducto_Mudanza_1004.pdf</p>
+                  <p class="text-[10px] text-emerald-700">¡Liberado! Certificado válido y registrado ante la conserjería de tu condominio.</p>
+                </div>
+              </div>
+              <button onclick="downloadSalvoconductoPDF()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-lg shadow-md transition-all flex items-center gap-1.5">
+                <span>📥</span> Descargar PDF
+              </button>
+            </div>
+          </div>
+
+          <!-- Navegación final del Paso 2 -->
+          <div class="flex justify-between items-center pt-4 border-t border-slate-100">
+            <button onclick="goToStep1()" class="px-4 py-2 border border-slate-200 rounded-lg text-xs font-bold text-slate-500 hover:bg-slate-50">Volver al Paso 1</button>
+            <button id="step2-next-btn" disabled onclick="goToFlowStep(3)" class="px-5 py-2.5 rounded-lg bg-slate-200 text-slate-400 font-bold text-xs cursor-not-allowed transition-all">
+              Avanzar a Checkout (Paso 3) →
+            </button>
+          </div>
+        </div>
+
+        <!-- ========================================== -->
+        <!-- PANTALLA PASO 3: CHECKOUT & INTENCIÓN ADAPTATIVA -->
+        <!-- ========================================== -->
+        <div id="step-container-3" class="hidden bg-white rounded-2xl border border-slate-200/80 p-6 md:p-8 shadow-sm space-y-6">
+          <div class="flex items-start justify-between flex-wrap gap-4">
+            <div class="flex items-start gap-3">
+              <span class="text-xl">🔑</span>
+              <div>
+                <span class="text-[9px] bg-brand-100 text-brand-800 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">Etapa 2: Entrega de la Propiedad</span>
+                <h2 class="text-base font-bold text-slate-800 mt-1">Coordinemos tu Checkout e Inspección física</h2>
+                <p class="text-xs text-slate-500 mt-0.5">La entrega del departamento se formaliza con la inspección física. Pre-selecciona tu intención y agenda tu bloque preferido.</p>
+              </div>
+            </div>
+            <button onclick="openEditarModal()" class="px-4 py-2 border border-slate-200 hover:bg-slate-50 rounded-lg text-xs font-bold text-slate-600 transition-all">
+              ⚙️ Modificar mi fecha de salida
+            </button>
+          </div>
+
+          <hr class="border-slate-100">
+
+          <!-- ADVERTENCIA DE ENTREGA DE LLAVES EN LA OFICINA DE ASSETPLAN -->
+          <div class="bg-amber-50 border-2 border-amber-300 rounded-2xl p-5 space-y-2 flex items-start gap-3">
+            <span class="text-2xl mt-0.5">📍</span>
+            <div>
+              <h4 class="text-xs font-bold text-amber-950">Atención: Entrega obligatoria de llaves en Oficina de Assetplan</h4>
+              <p class="text-[11px] text-amber-900 leading-relaxed font-medium">
+                Al término de tu último día de contrato, debes realizar de manera obligatoria la entrega de **todas las llaves físicas, controles de portón eléctrico y tarjetas magnéticas** directamente en nuestra oficina central ubicada en **Av. Providencia 1204, Oficina 501, Santiago**.
+              </p>
+            </div>
+          </div>
+
+          <!-- AGENDA DE INTENCIONES PREVIAS (Sugerencia Multifamily / Unitops) -->
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            
+            <!-- Declaración de intenciones tempranas -->
+            <div class="space-y-4 bg-slate-50 p-5 rounded-xl border border-slate-200 flex flex-col justify-between">
+              <div>
+                <h4 class="text-xs font-bold text-slate-700 uppercase tracking-wider">1. Tus Intenciones de Entrega</h4>
+                <p class="text-[10px] text-slate-400 mt-1">Ayúdanos a coordinar tu salida de forma fluida.</p>
+              </div>
+
+              <!-- ¿Estará presente? -->
+              <div class="space-y-2 py-2">
+                <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">¿Estarás presente en la inspección?</label>
+                <div class="flex gap-2">
+                  <label class="flex-1 flex items-center justify-center gap-2 p-2 border bg-white rounded-lg cursor-pointer text-xs font-semibold text-slate-700">
+                    <input type="radio" name="presence-radio" value="si" checked onchange="togglePresenceState()" class="text-brand-700 focus:ring-brand-700">
+                    <span>Sí</span>
+                  </label>
+                  <label class="flex-1 flex items-center justify-center gap-2 p-2 border bg-white rounded-lg cursor-pointer text-xs font-semibold text-slate-700">
+                    <input type="radio" name="presence-radio" value="no" onchange="togglePresenceState()" class="text-brand-700 focus:ring-brand-700">
+                    <span>No (Uso de Poder)</span>
+                  </label>
+                </div>
+              </div>
+
+              <!-- Método entrega de llaves -->
+              <div class="space-y-2">
+                <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">Método de entrega de llaves preferido</label>
+                <select id="key-method-select" class="w-full bg-white border border-slate-200 rounded-lg p-2.5 text-xs text-slate-700 focus:ring-1 focus:ring-brand-700">
+                  <option value="oficina">Entrega directa en Oficina Providencia (Recomendado)</option>
+                  <option value="buzon">Buzón de seguridad / Conserjería</option>
+                  <option value="conserje">Entrega al conserje con poder simple</option>
+                </select>
+              </div>
+
+              <div id="presence-no-banner" class="hidden p-3 bg-blue-50 border border-blue-150 rounded-lg text-[10px] text-blue-800 leading-relaxed">
+                ℹ️ Al autorizar la revisión en tu ausencia, el inspector levantará el acta de forma independiente y te enviaremos el reporte completo y fotos de inmediato.
+              </div>
+            </div>
+
+            <!-- Agendamiento de Visitas -->
+            <div class="space-y-4 bg-slate-50 p-5 rounded-xl border border-slate-200 flex flex-col justify-between">
+              <div>
+                <h4 class="text-xs font-bold text-slate-700 uppercase tracking-wider">2. Pre-selección de Horario de Visita</h4>
+                <p class="text-[10px] text-slate-400 mt-1">Elige el bloque ideal en que el inspector de Assetplan visitará la unidad.</p>
+              </div>
+              
+              <div class="space-y-3">
+                <div>
+                  <label class="block text-[10px] font-bold text-slate-500 mb-1 uppercase tracking-wider">Día del Checkout</label>
+                  <input type="date" id="checkout-date-input" value="2026-08-31" class="w-full bg-white border border-slate-200 rounded-lg p-2.5 text-xs font-bold text-slate-700 focus:ring-1 focus:ring-brand-700">
+                </div>
+                <div>
+                  <label class="block text-[10px] font-bold text-slate-500 mb-1 uppercase tracking-wider">Bloque Horario</label>
+                  <select class="w-full bg-white border border-slate-200 rounded-lg p-2.5 text-xs font-semibold text-slate-700 focus:ring-1 focus:ring-brand-700">
+                    <option>Mañana (09:00 - 13:00 hrs)</option>
+                    <option>Tarde (13:00 - 17:00 hrs)</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- MACRO-VISTA SIMPLIFICADA DEL PROCESO POST-CHECKOUT & EL EJECUTOR (PEDIDO DE SEBASTIÁN) -->
+          <div class="bg-slate-50 border border-slate-200 rounded-2xl p-5 md:p-6 space-y-4">
+            <div class="flex items-start gap-3">
+              <div class="w-8 h-8 rounded-xl bg-brand-50 text-brand-700 flex items-center justify-center text-base shrink-0 font-bold">🛠️</div>
+              <div>
+                <h3 class="text-xs font-bold text-slate-800 uppercase tracking-wider">El Proceso de Reparaciones de Assetplan (El Ejecutor)</h3>
+                <p class="text-xs text-slate-500 mt-0.5 leading-relaxed">
+                  Si durante el Checkout el inspector detecta desgastes significativos o daños, un **Ejecutor calificado de Assetplan** se encargará de resolverlos de inmediato.
+                </p>
+              </div>
+            </div>
+
+            <div class="pl-11 grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
+              <div class="space-y-1">
+                <span class="font-bold text-slate-800 block">⚡ Sin Tarifas Infladas</span>
+                <p class="text-slate-500 text-[10px] leading-relaxed">Usamos técnicos de nuestra planta interna con tarifas corporativas, evitando presupuestos de contratistas externos.</p>
+              </div>
+              <div class="space-y-1">
+                <span class="font-bold text-slate-800 block">📋 Transparencia Garantizada</span>
+                <p class="text-slate-500 text-[10px] leading-relaxed">Cualquier reparación se respaldará de manera asíncrona con fotos antes/después y boletas detalladas en tu liquidación.</p>
+              </div>
+              <div class="space-y-1">
+                <span class="font-bold text-slate-800 block">🚀 Devolución Acelerada</span>
+                <p class="text-slate-500 text-[10px] leading-relaxed">Nuestro equipo soluciona los pendientes en menos de 5 días hábiles, agilizando el retorno de tu garantía.</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Navegación final del Paso 3 -->
+          <div class="flex justify-between items-center pt-4 border-t border-slate-100">
+            <button onclick="goToFlowStep(2)" class="px-4 py-2 border border-slate-200 rounded-lg text-xs font-bold text-slate-500 hover:bg-slate-50">Volver al Paso 2</button>
+            <button onclick="completeCheckoutFlow()" class="px-5 py-2.5 rounded-lg bg-brand-700 hover:bg-brand-800 text-white font-bold text-xs shadow-md transition-all">
+              Agendar Checkout y Continuar →
+            </button>
+          </div>
+        </div>
+
+        <!-- ========================================== -->
+        <!-- PANTALLA PASO 4: LIQUIDACIÓN ASYNC -->
+        <!-- ========================================== -->
+        <div id="step-container-4" class="hidden bg-white rounded-2xl border border-slate-200/80 p-6 md:p-8 shadow-sm space-y-6">
+          <div class="flex items-start gap-4">
+            <div class="w-10 h-10 rounded-xl bg-brand-50 text-brand-700 flex items-center justify-center text-lg shrink-0">💰</div>
+            <div>
+              <span class="text-[10px] bg-brand-100 text-brand-800 px-2.5 py-0.5 rounded-full font-bold uppercase tracking-wider">Fase Final de la Salida</span>
+              <h2 class="text-base font-bold text-slate-800 mt-1">Tu proceso de liquidación de garantía está en curso</h2>
+              <p class="text-xs text-slate-500 mt-0.5">Hemos recibido formalmente tu departamento. Conoce el estado de tu devolución en tiempo real.</p>
+            </div>
+          </div>
+
+          <hr class="border-slate-100">
+
+          <!-- Línea de seguimiento asíncrona -->
+          <div class="bg-slate-50 rounded-2xl p-6 space-y-6">
+            <h3 class="text-xs font-bold text-slate-700 uppercase tracking-wider">Seguimiento de Devolución de Garantía</h3>
+            
+            <div class="relative pl-8 space-y-6 before:content-[''] before:absolute before:left-[11px] before:top-2 before:bottom-2 before:w-[2px] before:bg-slate-200">
+              <!-- Hito 1 -->
+              <div class="relative">
+                <span class="absolute -left-[31px] top-0.5 w-6 h-6 rounded-full bg-emerald-500 text-white flex items-center justify-center text-[10px] font-bold">✓</span>
+                <div>
+                  <h4 class="text-xs font-bold text-emerald-800">Checkout e inspección de llaves completada</h4>
+                  <p class="text-[10px] text-slate-500 mt-0.5">Entrega presencial de llaves registrada correctamente en la oficina central.</p>
+                </div>
+              </div>
+
+              <!-- Hito 2 -->
+              <div class="relative">
+                <span class="absolute -left-[31px] top-0.5 w-6 h-6 rounded-full bg-emerald-500 text-white flex items-center justify-center text-[10px] font-bold">✓</span>
+                <div>
+                  <h4 class="text-xs font-bold text-emerald-800">Evaluación de Ejecutor de reparaciones</h4>
+                  <p class="text-[10px] text-slate-500 mt-0.5">Revisión de paredes e iluminación completada. No se aplicarán cargos por daños graves.</p>
+                </div>
+              </div>
+
+              <!-- Hito 3 -->
+              <div class="relative">
+                <span class="absolute -left-[31px] top-0.5 w-6 h-6 rounded-full bg-brand-100 border border-brand-500 text-brand-700 flex items-center justify-center text-[10px] font-bold animate-pulse">3</span>
+                <div>
+                  <h4 class="text-xs font-bold text-brand-800">Cruce de Cuentas por Analista (En Proceso)</h4>
+                  <p class="text-[10px] text-brand-600 mt-0.5 font-medium">Cruzando las últimas lecturas físicas y boletas emitidas reales de agua y electricidad.</p>
+                </div>
+              </div>
+
+              <!-- Hito 4 -->
+              <div class="relative">
+                <span class="absolute -left-[31px] top-0.5 w-6 h-6 rounded-full bg-white border border-slate-200 text-slate-400 flex items-center justify-center text-[10px] font-bold">4</span>
+                <div>
+                  <h4 class="text-xs font-semibold text-slate-400">Transferencia bancaria final</h4>
+                  <p class="text-[10px] text-slate-400 mt-0.5">El dinero se depositará directamente en la cuenta corriente registrada.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="bg-blue-50/50 border border-blue-100 rounded-xl p-4 text-xs text-blue-900 leading-relaxed">
+            <strong>Plazo Legal de Transferencia:</strong> De acuerdo a la ley de arriendos, la devolución de la garantía se procesará en un plazo máximo de <strong>15 días hábiles</strong> a contar de la recepción formal de las llaves en oficina. Te mantendremos informado de cada hito.
+          </div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- ========================================== -->
+  <!-- MODALES AUXILIARES DE INTERACCIÓN -->
+  <!-- ========================================== -->
+
+  <!-- MODAL DE SELECCIÓN DE MOTIVOS DE SALIDA (PILLS TÁCTILES) -->
+  <div id="motivos-modal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl w-full max-w-xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[90vh]">
+      <div class="p-5 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+        <div>
+          <h3 class="text-sm font-bold text-slate-800">¿Por qué dejarás de arrendar?</h3>
+          <p class="text-[11px] text-slate-500 mt-0.5">Selecciona los motivos principales para ayudarnos a mejorar.</p>
+        </div>
+        <button onclick="closeMotivosModal()" class="text-slate-400 hover:text-slate-600 text-lg font-bold">×</button>
+      </div>
+
+      <div class="p-5 overflow-y-auto space-y-5 custom-scrollbar">
+        <div>
+          <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">Económicos</p>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <div onclick="toggleMotivoItem(this)" class="p-3 border border-slate-200 rounded-xl text-xs hover:bg-slate-50 cursor-pointer flex items-center gap-2 select-none">
+              <input type="checkbox" class="rounded text-brand-700 pointer-events-none">
+              <span>Cambió mi situación económica</span>
+            </div>
+            <div onclick="toggleMotivoItem(this)" class="p-3 border border-slate-200 rounded-xl text-xs hover:bg-slate-50 cursor-pointer flex items-center gap-2 select-none">
+              <input type="checkbox" class="rounded text-brand-700 pointer-events-none">
+              <span>Arriendo / GGCC elevado</span>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">Personales</p>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <div onclick="toggleMotivoItem(this)" class="p-3 border border-slate-200 rounded-xl text-xs hover:bg-slate-50 cursor-pointer flex items-center gap-2 select-none">
+              <input type="checkbox" class="rounded text-brand-700 pointer-events-none">
+              <span>Asuntos familiares o de salud</span>
+            </div>
+            <div onclick="toggleMotivoItem(this)" class="p-3 border border-slate-200 rounded-xl text-xs hover:bg-slate-50 cursor-pointer flex items-center gap-2 select-none">
+              <input type="checkbox" class="rounded text-brand-700 pointer-events-none">
+              <span>Vivienda más grande</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="p-4 border-t border-slate-100 bg-slate-50 flex justify-end gap-2.5">
+        <button onclick="closeMotivosModal()" class="px-4 py-2 text-xs font-bold text-slate-500 bg-white border border-slate-200 rounded-lg hover:bg-slate-100">Cancelar</button>
+        <button onclick="confirmMotivos()" class="px-5 py-2 bg-brand-700 text-white text-xs font-bold rounded-lg hover:bg-brand-800 shadow-sm">Confirmar selección</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL DE VALIDACIÓN Y CONFIRMACIÓN DE SOLICITUD (PASO 1) -->
+  <div id="step-1-confirm-modal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl w-full max-w-lg shadow-2xl border border-slate-200 overflow-hidden">
+      <div class="p-5 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+        <div class="flex items-center gap-2">
+          <span class="text-base">🚚</span>
+          <div>
+            <h3 class="text-xs font-bold text-slate-800">Confirmemos tu solicitud de salida</h3>
+            <p class="text-[10px] text-slate-400">Revisa la información antes de enviar.</p>
+          </div>
+        </div>
+        <button onclick="closeConfirmModal()" class="text-slate-400 hover:text-slate-600 text-lg font-bold">×</button>
+      </div>
+
+      <div class="p-6 space-y-5">
+        <div class="bg-slate-50 border border-slate-150 rounded-xl p-4 space-y-2">
+          <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Detalle del término de arriendo</p>
+          <div class="flex items-center justify-between text-xs text-slate-700">
+            <span class="font-bold">🏠 Departamento 1004</span>
+            <span class="text-slate-500">Último día: <strong class="text-slate-800 font-bold" id="modal-confirm-date-label">DD-MM-AAAA</strong></span>
+          </div>
+        </div>
+
+        <div class="space-y-3 bg-slate-50 p-4 rounded-xl border border-slate-200 text-xs text-slate-600 leading-relaxed">
+          <h4 class="font-bold text-slate-800 flex items-center gap-1.5">⚡ Proyección de consumos (Paso 2)</h4>
+          <p>
+            Al confirmar, guardaremos tu aviso y avanzaremos al Paso 2, donde realizaremos la simulación completa de tu liquidación de consumos y garantía para liberar tu mudanza.
+          </p>
+        </div>
+
+        <label class="flex items-start gap-2.5 cursor-pointer select-none">
+          <input type="checkbox" id="modal-chk-accept" onchange="toggleModalConfirmSubmitBtn()" class="mt-0.5 text-brand-700 rounded">
+          <div class="text-[11px] text-slate-600 font-medium">He leído los plazos de mi offboarding de salida y acepto los cargos y cobros preliminares estimados.</div>
+        </label>
+      </div>
+
+      <div class="p-4 border-t border-slate-100 bg-slate-50 flex justify-between items-center">
+        <button onclick="closeConfirmModal()" class="px-4 py-2 border border-slate-200 bg-white rounded-lg text-xs font-bold text-slate-500 hover:bg-slate-100">Volver</button>
+        <button id="modal-confirm-submit-btn" disabled onclick="submitAvisoSalida()" class="px-5 py-2.5 bg-slate-200 text-slate-400 rounded-lg text-xs font-bold cursor-not-allowed transition-all shadow-sm">
+          Confirmar y Dejar de arrendar
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL EDITAR O CANCELAR DESDE PASO 2 Y 3 -->
+  <div id="modal-editar-cancelar" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl w-full max-w-lg shadow-2xl border border-slate-200 overflow-hidden">
+      <div class="p-5 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+        <div>
+          <h3 class="text-xs font-bold text-slate-800">Modificar mi fecha de salida</h3>
+          <p class="text-[10px] text-slate-400">Cambia la fecha de entrega y recalcularemos tu contrato.</p>
+        </div>
+        <button onclick="closeEditarModal()" class="text-slate-400 hover:text-slate-600 text-lg font-bold">×</button>
+      </div>
+
+      <div class="p-6 space-y-4">
+        <div>
+          <label class="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-2">Nueva fecha de salida</label>
+          <input type="date" id="modal-edit-date-picker" onchange="evaluateModalExitDate()" class="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-xs font-bold text-slate-700 focus:ring-2 focus:ring-brand-700">
+        </div>
+
+        <!-- Banners informativos interactivos -->
+        <div id="modal-edit-banner-ok" class="block bg-emerald-50 border border-emerald-150 rounded-xl p-4 text-xs text-emerald-800">
+          <p class="font-bold flex items-center gap-1">✓ ¡Súper! Estás dentro del plazo contractual (sin cargos)</p>
+          <p class="text-[11px] text-emerald-700 mt-1">Tu nueva fecha cumple perfectamente con el preaviso reglamentario de 60 días mínimos.</p>
+        </div>
+
+        <div id="modal-edit-banner-error" class="hidden bg-amber-50 border border-amber-200 rounded-xl p-4 text-xs text-amber-800 space-y-2">
+          <p class="font-bold flex items-center gap-1">⚠️ Aviso fuera de plazo (Se aplicará cargo de preaviso)</p>
+          <p class="text-[11px] text-amber-700 leading-relaxed">Tu contrato estipula 60 días mínimos de preaviso. Al seleccionar esta fecha, estás dando aviso tardío, por lo que se sumará un cobro proporcional.</p>
+          <div class="bg-white/85 rounded-lg p-2.5 border border-amber-100 font-bold text-[10px] text-amber-950 flex justify-between">
+            <span>Cargo por preaviso faltante:</span>
+            <span id="modal-edit-fine-monto">$230.000</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="p-4 border-t border-slate-100 bg-slate-50 flex justify-between items-center">
+        <!-- Opción Seguir Arrendando (Cancelación) -->
+        <button onclick="clickSeguirArrendandoCancel()" class="px-4 py-2 border border-rose-200 hover:bg-rose-50 text-rose-600 rounded-lg text-xs font-bold transition-all">
+          ❌ Cancelar Salida y Seguir Arrendando
+        </button>
+        <button onclick="submitNewModalDate()" class="px-5 py-2.5 bg-brand-700 hover:bg-brand-800 text-white rounded-lg text-xs font-bold shadow-md transition-all">
+          Guardar Cambios
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL EXPLICATIVO VIDEO -->
+  <div id="video-modal" class="hidden fixed inset-0 bg-slate-900/80 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl w-full max-w-2xl overflow-hidden shadow-2xl border border-slate-100 flex flex-col">
+      <div class="p-4 border-b flex justify-between items-center bg-slate-50">
+        <h3 class="text-xs font-bold text-slate-800 uppercase tracking-wider">🎬 Guía de Offboarding - Assetplan</h3>
+        <button onclick="closeVideoModal()" class="text-slate-400 hover:text-slate-600 font-bold text-lg">×</button>
+      </div>
+      <div class="p-6 bg-slate-950 flex flex-col items-center justify-center aspect-video text-white relative">
+        <!-- SVG Play representacional y hermoso -->
+        <div class="w-16 h-12 bg-rose-600 rounded-2xl flex items-center justify-center cursor-pointer shadow-lg hover:scale-110 transition-transform">
+          <svg class="w-6 h-6 text-white fill-current" viewBox="0 0 24 24">
+            <path d="M8 5v14l11-7z"/>
+          </svg>
+        </div>
+        <p class="text-xs font-semibold mt-4 text-slate-300">Video explicativo: Tu proceso de salida en 3 minutos</p>
+        <p class="text-[10px] text-slate-500 mt-1">Desarrollado para educar al Renter, reducir dudas frecuentes y mejorar el NPS.</p>
+      </div>
+      <div class="p-4 bg-slate-50 text-right">
+        <button onclick="closeVideoModal()" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs rounded-xl transition-all">Cerrar Guía</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================== -->
+  <!-- CHATBOT CONTEXTUAL CON GEMINI IA -->
+  <!-- ========================================== -->
+  <div class="fixed bottom-5 right-5 z-40 flex flex-col items-end">
+    <!-- Ventana del Chat (Oculta por defecto) -->
+    <div id="chat-widget-box" class="hidden w-80 sm:w-96 h-96 bg-white border border-slate-200 rounded-2xl shadow-2xl overflow-hidden flex flex-col mb-3">
+      <!-- Header -->
+      <div class="bg-brand-700 text-white p-3 flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <span class="text-lg">🤖</span>
+          <div>
+            <p class="text-xs font-bold leading-tight">Asistente Assetplan</p>
+            <p class="text-[9px] text-slate-200">Asistencia de Offboarding en Vivo</p>
+          </div>
+        </div>
+        <button onclick="toggleChatWidget()" class="text-white hover:text-slate-200 font-bold text-base">×</button>
+      </div>
+
+      <!-- Historial de mensajes -->
+      <div id="chat-messages-container" class="flex-1 p-3 overflow-y-auto space-y-2.5 bg-slate-50 text-[11px] custom-scrollbar">
+        <div class="bg-brand-50 text-brand-900 p-2.5 rounded-lg max-w-[85%] chat-bubble-bot border">
+          ¡Hola Pedro! Soy tu asistente de salida. Puedo responder tus dudas sobre plazos, consumos, el cobro del prorrateo o cómo entregar las llaves. ¿En qué te ayudo?
+        </div>
+      </div>
+
+      <!-- Input de entrada -->
+      <div class="p-2 border-t flex gap-1.5 bg-white">
+        <input type="text" id="chat-user-input" onkeydown="handleChatKeyDown(event)" placeholder="Escribe tu duda..." class="flex-1 border rounded-lg px-3 py-1.5 text-xs focus:ring-1 focus:ring-brand-700 outline-none">
+        <button onclick="sendChatMessage()" class="px-3 bg-brand-700 hover:bg-brand-800 text-white rounded-lg text-xs font-bold transition-all">Enviar</button>
+      </div>
+    </div>
+
+    <!-- Botón flotante -->
+    <button onclick="toggleChatWidget()" class="w-14 h-14 rounded-full bg-brand-700 hover:bg-brand-800 text-white shadow-xl flex items-center justify-center text-2xl transition-transform hover:scale-105">
+      💬
+    </button>
+  </div>
+
+  <!-- TOAST DE CONFIRMACIÓN FLOTANTE -->
+  <div id="toast-message" class="hidden fixed bottom-5 left-5 bg-slate-900 text-white px-4 py-3 rounded-xl text-xs font-semibold shadow-lg z-50 flex items-center gap-2">
+    <span id="toast-text">✓ Mensaje</span>
+  </div>
+
+  <!-- ========================================== -->
+  <!-- SISTEMA LÓGICO JAVASCRIPT -->
+  <!-- ========================================== -->
+  <script>
+    // Variables de Estado de Proceso
+    let state = {
+      isExitActive: false,
+      currentStep: 1,
+      exitDate: '2026-08-31',
+      hasFine: false,
+      fineAmount: 0,
+      motivesSelected: [],
+      calderaBaseRate: 4500,
+      utilitiesPaid: false,
+      checkoutScheduled: false,
+      isAbandonedState: false,
+      simState: 'excellent', // excellent, minor, damaged
+      simRepAmount: 0
+    };
+
+    // Al cargar la ventana, fijar fechas por defecto
+    window.onload = function() {
+      // Seteamos fecha inicial: 31 de Agosto de 2026 (dentro del plazo simulado)
+      document.getElementById('exit-date-input').value = '2026-08-31';
+      document.getElementById('modal-edit-date-picker').value = '2026-08-31';
+      evaluateExitDateInput();
+      updateSimNet();
+    };
+
+    // Al hacer clic en Dejar de Arrendar
+    function clickDejarArrendar() {
+      document.getElementById('viewport-home').classList.add('hidden');
+      document.getElementById('offboarding-central-container').classList.remove('hidden');
+      goToFlowStep(state.currentStep);
+    }
+
+    // Navegar de forma lógica al Home
+    function goToHome() {
+      document.getElementById('offboarding-central-container').classList.add('hidden');
+      document.getElementById('viewport-home').classList.remove('hidden');
+
+      const banner = document.getElementById('home-exit-banner');
+      const bannerBadge = document.getElementById('banner-status-badge');
+      const bannerBadgeText = document.getElementById('banner-status-text');
+      const bannerDateLabel = document.getElementById('banner-exit-date-label');
+      const bannerActionBtn = document.getElementById('banner-action-btn');
+
+      if (state.isExitActive) {
+        banner.classList.remove('hidden');
+        banner.classList.add('flex');
+        bannerDateLabel.innerText = formatDateToChile(state.exitDate);
+
+        // Ocultar CTA regular de "Dejar de arrendar" del Home para evitar duplicidades
+        document.getElementById('home-dejar-arrendar-cta').classList.add('hidden');
+
+        if (state.isAbandonedState) {
+          // ESCENARIO C: ABANDONADO / INCOMPLETO
+          banner.className = "bg-rose-50 border-2 border-rose-300 rounded-xl p-4 flex flex-col sm:flex-row justify-between items-center gap-3 transition-all duration-300 shadow-md";
+          bannerBadge.className = "flex items-center gap-1.5 bg-rose-100 text-rose-800 text-[10px] font-extrabold px-3 py-1 rounded-full border border-rose-200 animate-pulse uppercase tracking-wider";
+          
+          if (state.currentStep === 2) {
+            bannerBadgeText.innerText = "Acción pendiente: Pago de Consumos";
+            bannerActionBtn.innerText = "Saldar Cuentas →";
+          } else if (state.currentStep === 3) {
+            bannerBadgeText.innerText = "Acción pendiente: Agendar Checkout";
+            bannerActionBtn.innerText = "Coordinar Checkout →";
+          }
+          bannerActionBtn.className = "px-3.5 py-1.5 bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold rounded-lg transition-all shadow-xs";
+        } else if (state.hasFine) {
+          // ESCENARIO B: CON CARGO (RÉPLICA EXACTA DE TU CAPTURA DE PANTALLA 11.01.16)
+          banner.className = "bg-blue-50 border border-blue-200 rounded-xl p-4 flex flex-col sm:flex-row justify-between items-center gap-3 transition-all duration-300";
+          bannerBadge.className = "flex items-center gap-1.5 bg-rose-50 text-rose-700 text-[10px] font-extrabold px-2.5 py-1 rounded-full border border-rose-200 uppercase";
+          bannerBadgeText.innerText = "Se aplicarán cargos. Revísalas";
+          bannerActionBtn.innerText = "Editar o cancelar";
+          bannerActionBtn.className = "text-xs font-bold text-brand-700 hover:text-brand-800 underline";
+        } else {
+          // ESCENARIO A: SIN CARGO
+          banner.className = "bg-emerald-50/70 border border-emerald-200 rounded-xl p-4 flex flex-col sm:flex-row justify-between items-center gap-3 transition-all duration-300";
+          bannerBadge.className = "flex items-center gap-1.5 bg-emerald-100 text-emerald-800 text-[10px] font-extrabold px-2.5 py-1 rounded-full border border-emerald-200";
+          bannerBadgeText.innerText = "¡Súper! Dentro del plazo contractual";
+          bannerActionBtn.innerText = "Editar o cancelar";
+          bannerActionBtn.className = "text-xs font-bold text-brand-700 hover:text-brand-800 underline";
+        }
+
+        bannerBadge.classList.remove('hidden');
+        bannerBadge.classList.add('flex');
+      } else {
+        banner.classList.add('hidden');
+        document.getElementById('home-dejar-arrendar-cta').classList.remove('hidden');
+      }
+    }
+
+    // Retoma el flujo de offboarding desde el Home Banner
+    function resumeOffboardingFlow() {
+      document.getElementById('viewport-home').classList.add('hidden');
+      document.getElementById('offboarding-central-container').classList.remove('hidden');
+      goToFlowStep(state.currentStep);
+    }
+
+    // Simula estado de proceso "Tirado" o Incompleto desde el simulador
+    function simulateIncompleteProcess() {
+      state.isExitActive = true;
+      state.isAbandonedState = true;
+      
+      // Simulamos que el usuario dio el aviso (Paso 1) pero no pagó los consumos del Salvoconducto (Paso 2)
+      state.currentStep = 2;
+      state.utilitiesPaid = false;
+
+      goToHome();
+      showToast("⚠️ Simulación: Se activó la advertencia de 'Proceso Incompleto' en el Home.");
+    }
+
+    // Resetea el prototipo a su estado de fábrica
+    function resetFlow() {
+      state.isExitActive = false;
+      state.currentStep = 1;
+      state.exitDate = '2026-08-31';
+      state.hasFine = false;
+      state.fineAmount = 0;
+      state.isAbandonedState = false;
+      state.utilitiesPaid = false;
+      state.checkoutScheduled = false;
+      state.simState = 'excellent';
+      state.simRepAmount = 0;
+
+      document.getElementById('exit-date-input').value = '2026-08-31';
+      document.getElementById('step2-sc-locked-box').classList.remove('hidden');
+      document.getElementById('step2-sc-unlocked-box').classList.add('hidden');
+      
+      const btnPay = document.getElementById('step2-pay-cta');
+      btnPay.disabled = false;
+      btnPay.innerText = "💳 Saldar consumos y liberar SC";
+      btnPay.className = "w-full md:w-auto px-5 py-3 bg-brand-700 hover:bg-brand-800 text-white font-bold text-xs rounded-xl shadow-md transition-all shrink-0";
+
+      updateSimNet();
+      goToHome();
+      showToast("🏠 Simulador reiniciado con éxito.");
+    }
+
+    // Forzar escenario con cargo desde los controles superiores
+    function forceScenario(scen) {
+      state.isExitActive = true;
+      state.isAbandonedState = false;
+      
+      if (scen === 'con-cargo') {
+        state.exitDate = '2026-06-30';
+        state.hasFine = true;
+        state.fineAmount = 230000;
+        state.currentStep = 1;
+        
+        document.getElementById('exit-date-input').value = '2026-06-30';
+        evaluateExitDateInput();
+        clickDejarArrendar();
+        showToast("📅 Escenario: Se forzó aviso con cargos.");
+      }
+    }
+
+    // Navegar entre las vistas del stepper unificado
+    function goToFlowStep(stepNum) {
+      state.currentStep = stepNum;
+
+      // Esconder todos los contenedores de paso
+      document.getElementById('step-container-1').classList.add('hidden');
+      document.getElementById('step-container-2').classList.add('hidden');
+      document.getElementById('step-container-3').classList.add('hidden');
+      document.getElementById('step-container-4').classList.add('hidden');
+
+      // Mostrar el contenedor seleccionado
+      document.getElementById(`step-container-${stepNum}`).classList.remove('hidden');
+
+      // Actualizar el Stepper Horizontal
+      updateStepperHorizontalUI(stepNum);
+
+      // Si viaja al paso 2, recalcular montos finales
+      if (stepNum === 2) {
+        recalculateCalderaStep2();
+      }
+    }
+
+    // Lógica visual de los Nodos del Stepper
+    function updateStepperHorizontalUI(stepNum) {
+      const line = document.getElementById('master-progress-line');
+      
+      if (stepNum === 1) line.style.width = '0%';
+      if (stepNum === 2) line.style.width = '33%';
+      if (stepNum === 3) line.style.width = '66%';
+      if (stepNum === 4) line.style.width = '100%';
+
+      for (let i = 1; i <= 4; i++) {
+        const node = document.getElementById(`m-step-node-${i}`);
+        const title = document.getElementById(`m-step-title-${i}`);
+
+        if (i < stepNum) {
+          node.className = "w-8 h-8 rounded-full bg-emerald-500 border-2 border-emerald-600 text-white flex items-center justify-center font-bold text-xs shadow-xs transition-all duration-300";
+          node.innerHTML = "✓";
+          title.className = "text-[11px] font-bold text-emerald-600 mt-2";
+        } else if (i === stepNum) {
+          node.className = "w-8 h-8 rounded-full bg-brand-100 border-2 border-brand-700 text-brand-700 flex items-center justify-center font-extrabold text-xs shadow-md ring-4 ring-brand-100 transition-all duration-300 scale-105";
+          node.innerHTML = i;
+          title.className = "text-[11px] font-extrabold text-brand-700 mt-2";
+        } else {
+          node.className = "w-8 h-8 rounded-full bg-white border border-slate-200 text-slate-400 flex items-center justify-center font-semibold text-xs shadow-xs transition-all duration-300";
+          node.innerHTML = i;
+          title.className = "text-[11px] font-semibold text-slate-400 mt-2";
+        }
+      }
+    }
+
+    // Evalúa la fecha del formulario de aviso para disparar alertas de cargos (60 días requeridos)
+    function evaluateExitDateInput() {
+      const picker = document.getElementById('exit-date-input');
+      const bannerOk = document.getElementById('step-1-banner-ok');
+      const bannerError = document.getElementById('step-1-banner-error');
+
+      const selectedDate = new Date(picker.value + 'T00:00:00');
+      const today = new Date('2026-06-12T00:00:00'); // Fecha de hoy simulada
+
+      const diffTime = Math.abs(selectedDate - today);
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+      state.exitDate = picker.value;
+
+      if (diffDays < 60) {
+        state.hasFine = true;
+        state.fineAmount = 230000;
+
+        bannerOk.classList.add('hidden');
+        bannerError.classList.remove('hidden');
+        document.getElementById('fine-days-label').innerText = `${60 - diffDays} días faltantes`;
+        document.getElementById('fine-amount-label').innerText = `$230.000`;
+      } else {
+        state.hasFine = false;
+        state.fineAmount = 0;
+
+        bannerOk.classList.remove('hidden');
+        bannerError.classList.add('hidden');
+      }
+      updateSimNet();
+    }
+
+    // Configurar fecha óptima recomendada
+    function setOptimalExitDate() {
+      document.getElementById('exit-date-input').value = '2026-08-31';
+      evaluateExitDateInput();
+      showToast("💡 Fecha fijada al 31 de Agosto (Cargo reducido a $0)");
+    }
+
+    // Envío del Paso 1: Abre el modal de confirmación
+    function handleStep1Submit() {
+      document.getElementById('modal-confirm-date-label').innerText = formatDateToChile(state.exitDate);
+      document.getElementById('step-1-confirm-modal').classList.remove('hidden');
+    }
+    function closeConfirmModal() {
+      document.getElementById('step-1-confirm-modal').classList.add('hidden');
+    }
+    function toggleModalConfirmSubmitBtn() {
+      const chk = document.getElementById('modal-chk-accept');
+      const btn = document.getElementById('modal-confirm-submit-btn');
+
+      if (chk.checked) {
+        btn.disabled = false;
+        btn.className = "px-5 py-2.5 bg-brand-700 hover:bg-brand-800 text-white rounded-lg text-xs font-bold transition-all shadow-md";
+      } else {
+        btn.disabled = true;
+        btn.className = "px-5 py-2.5 bg-slate-200 text-slate-400 rounded-lg text-xs font-bold cursor-not-allowed transition-all shadow-sm";
+      }
+    }
+    function submitAvisoSalida() {
+      state.isExitActive = true;
+      closeConfirmModal();
+      showToast("🚚 ¡Aviso de salida registrado con éxito!");
+      goToFlowStep(2);
+    }
+
+    // Paso 2: Recalcular m³ de caldera
+    function recalculateCalderaStep2() {
+      const input = document.getElementById('step2-caldera-input');
+      const calderaValLabel = document.getElementById('step2-caldera-val');
+      const grandTotalAmountText = document.getElementById('step2-grand-total-amount');
+      const fineBreakdown = document.getElementById('step2-fine-breakdown-text');
+
+      let currentReading = parseFloat(input.value) || 120;
+      let lastReading = 120;
+
+      if (currentReading < lastReading) {
+        currentReading = lastReading;
+      }
+
+      let m3Consumed = currentReading - lastReading;
+      let calderaPrice = m3Consumed * state.calderaBaseRate;
+      let servicesTotal = 15500 + 12000 + calderaPrice + 40000; // Luz + Agua + Caldera + GGCC
+
+      let finalTotal = servicesTotal;
+      if (state.hasFine) {
+        finalTotal += state.fineAmount;
+        fineBreakdown.classList.remove('hidden');
+      } else {
+        fineBreakdown.classList.add('hidden');
+      }
+
+      calderaValLabel.innerText = `$${calderaPrice.toLocaleString('es-CL')}`;
+      grandTotalAmountText.innerText = `$${finalTotal.toLocaleString('es-CL')}`;
+      
+      updateSimNet();
+    }
+
+    // Cambiar estado de simulación de garantía
+    function setSimState(simType) {
+      state.simState = simType;
+      
+      const btnEx = document.getElementById('sim-state-excellent');
+      const btnMi = document.getElementById('sim-state-minor');
+      const btnDa = document.getElementById('sim-state-damaged');
+
+      btnEx.className = "py-2.5 border text-[10px] flex flex-col items-center gap-1 rounded-xl text-center transition-all";
+      btnMi.className = "py-2.5 border text-[10px] flex flex-col items-center gap-1 rounded-xl text-center transition-all";
+      btnDa.className = "py-2.5 border text-[10px] flex flex-col items-center gap-1 rounded-xl text-center transition-all";
+
+      if (simType === 'excellent') {
+        state.simRepAmount = 0;
+        btnEx.className += " border-brand-700 bg-brand-50/50 text-brand-700 font-bold";
+        btnMi.className += " border-slate-200 text-slate-600 hover:bg-slate-100";
+        btnDa.className += " border-slate-200 text-slate-600 hover:bg-slate-100";
+      } else if (simType === 'minor') {
+        state.simRepAmount = 80000;
+        btnMi.className += " border-brand-700 bg-brand-50/50 text-brand-700 font-bold";
+        btnEx.className += " border-slate-200 text-slate-600 hover:bg-slate-100";
+        btnDa.className += " border-slate-200 text-slate-600 hover:bg-slate-100";
+      } else {
+        state.simRepAmount = 250000;
+        btnDa.className += " border-brand-700 bg-brand-50/50 text-brand-700 font-bold";
+        btnEx.className += " border-slate-200 text-slate-600 hover:bg-slate-100";
+        btnMi.className += " border-slate-200 text-slate-600 hover:bg-slate-100";
+      }
+
+      updateSimNet();
+    }
+
+    // Actualizar neto de la simulación
+    function updateSimNet() {
+      const input = document.getElementById('step2-caldera-input');
+      let currentReading = parseFloat(input?.value) || 120;
+      let calderaPrice = Math.max(0, currentReading - 120) * state.calderaBaseRate;
+      let consumosTotal = 15500 + 12000 + calderaPrice + 40000;
+
+      document.getElementById('sim-consumos-val').innerText = `-$${consumosTotal.toLocaleString('es-CL')}`;
+      document.getElementById('sim-cargos-val').innerText = `-$${state.fineAmount.toLocaleString('es-CL')}`;
+      document.getElementById('sim-rep-val').innerText = `-$${state.simRepAmount.toLocaleString('es-CL')}`;
+
+      let deposit = 1015000;
+      let net = deposit - consumosTotal - state.fineAmount - state.simRepAmount;
+      document.getElementById('sim-net-return').innerText = `$${Math.max(0, net).toLocaleString('es-CL')}`;
+    }
+
+    // Paso 2: Simular el pago
+    function payConsumosProyectados() {
+      state.utilitiesPaid = true;
+      document.getElementById('step2-sc-locked-box').classList.add('hidden');
+      document.getElementById('step2-sc-unlocked-box').classList.remove('hidden');
+      document.getElementById('step2-sc-unlocked-box').classList.add('flex');
+
+      const btnPay = document.getElementById('step2-pay-cta');
+      btnPay.disabled = true;
+      btnPay.innerText = "✓ Cuentas Saldadas con Éxito";
+      btnPay.className = "px-5 py-3 bg-emerald-600 text-white rounded-xl text-xs font-bold transition-all cursor-not-allowed shadow-none";
+
+      const btnNext = document.getElementById('step2-next-btn');
+      btnNext.disabled = false;
+      btnNext.className = "px-5 py-2.5 rounded-lg bg-brand-700 hover:bg-brand-800 text-white font-bold text-xs shadow-md cursor-pointer transition-all";
+
+      showToast("💳 ¡Consumos saldados! Salvoconducto liberado.");
+    }
+
+    // Paso 3: Asistencia del Renter
+    function togglePresenceState() {
+      const radioVal = document.querySelector('input[name="presence-radio"]:checked').value;
+      const banner = document.getElementById('presence-no-banner');
+
+      if (radioVal === 'no') {
+        banner.classList.remove('hidden');
+      } else {
+        banner.classList.add('hidden');
+      }
+    }
+
+    // Paso 3: Completar Checkout
+    function completeCheckoutFlow() {
+      state.checkoutScheduled = true;
+      showToast("📅 ¡Checkout agendado y registrado con éxito!");
+      goToFlowStep(4);
+    }
+
+    // LÓGICA DE EDICIÓN / CANCELACIÓN DENTRO DEL STEPPER
+    function openEditarModal() {
+      document.getElementById('modal-edit-date-picker').value = state.exitDate;
+      evaluateModalExitDate();
+      document.getElementById('modal-editar-cancelar').classList.remove('hidden');
+    }
+    function closeEditarModal() {
+      document.getElementById('modal-editar-cancelar').classList.add('hidden');
+    }
+
+    // Evaluar fecha en el modal de edición
+    function evaluateModalExitDate() {
+      const picker = document.getElementById('modal-edit-date-picker');
+      const bannerOk = document.getElementById('modal-edit-banner-ok');
+      const bannerError = document.getElementById('modal-edit-banner-error');
+
+      const selectedDate = new Date(picker.value + 'T00:00:00');
+      const today = new Date('2026-06-12T00:00:00');
+
+      const diffTime = Math.abs(selectedDate - today);
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+      if (diffDays < 60) {
+        bannerOk.classList.add('hidden');
+        bannerError.classList.remove('hidden');
+        document.getElementById('modal-edit-fine-monto').innerText = `$230.000`;
+      } else {
+        bannerOk.classList.remove('hidden');
+        bannerError.classList.add('hidden');
+      }
+    }
+
+    // Confirmar nueva fecha editada desde el modal
+    function submitNewModalDate() {
+      const picker = document.getElementById('modal-edit-date-picker');
+      state.exitDate = picker.value;
+      
+      // Reevaluamos multa
+      const selectedDate = new Date(picker.value + 'T00:00:00');
+      const today = new Date('2026-06-12T00:00:00');
+      const diffTime = Math.abs(selectedDate - today);
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+      if (diffDays < 60) {
+        state.hasFine = true;
+        state.fineAmount = 230000;
+      } else {
+        state.hasFine = false;
+        state.fineAmount = 0;
+      }
+
+      closeEditarModal();
+      showToast("📅 Fecha de salida modificada correctamente.");
+      
+      // Si estamos en Paso 2, recalcular
+      if (state.currentStep === 2) {
+        recalculateCalderaStep2();
+      } else {
+        goToFlowStep(state.currentStep);
+      }
+    }
+
+    // Cancelación total (Opción Seguir Arrendando)
+    function clickSeguirArrendandoCancel() {
+      closeEditarModal();
+      resetFlow();
+      showToast("🏠 Salida cancelada. ¡Nos alegra que te quedes!");
+    }
+
+    // LÓGICA DE MOTIVOS DE SALIDA (PILLS)
+    function openMotivosModal() {
+      document.getElementById('motivos-modal').classList.remove('hidden');
+    }
+    function closeMotivosModal() {
+      document.getElementById('motivos-modal').classList.add('hidden');
+    }
+    function toggleMotivoItem(card) {
+      const chk = card.querySelector('input');
+      chk.checked = !chk.checked;
+      
+      if (chk.checked) {
+        card.classList.remove('border-slate-200');
+        card.classList.add('border-brand-700', 'bg-blue-50/50');
+      } else {
+        card.classList.remove('border-brand-700', 'bg-blue-50/50');
+        card.classList.add('border-slate-200');
+      }
+    }
+    function confirmMotivos() {
+      const checkboxes = document.querySelectorAll('#motivos-modal input');
+      let motives = [];
+      
+      checkboxes.forEach(chk => {
+        if (chk.checked) {
+          motives.push(chk.nextElementSibling.innerText);
+        }
+      });
+
+      const label = document.getElementById('motivo-seleccionado-text');
+      if (motives.length > 0) {
+        state.motivesSelected = motives;
+        label.innerText = motives.join(', ');
+        label.className = "text-slate-800 font-bold";
+      } else {
+        state.motivesSelected = [];
+        label.innerText = "Selecciona uno o más motivos para ayudarnos a mejorar...";
+        label.className = "text-slate-400";
+      }
+
+      closeMotivosModal();
+    }
+
+    // Helpers modales adicionales
+    function openVideoModal() {
+      document.getElementById('video-modal').classList.remove('hidden');
+    }
+    function closeVideoModal() {
+      document.getElementById('video-modal').classList.add('hidden');
+    }
+
+    // Helper: Formato de Fecha Chile
+    function formatDateToChile(dateStr) {
+      const parts = dateStr.split('-');
+      if (parts.length === 3) {
+        return `${parts[2]}-${parts[1]}-${parts[0]}`;
+      }
+      return dateStr;
+    }
+
+    // Helper: Descarga PDF
+    function downloadSalvoconductoPDF() {
+      showToast("📥 Descargando Salvoconducto_Mudanza_1004.pdf...");
+    }
+
+    // Helper: Toast flotante
+    function showToast(text) {
+      const toast = document.getElementById('toast-message');
+      const label = document.getElementById('toast-text');
+
+      label.innerText = text;
+      toast.classList.remove('hidden');
+
+      setTimeout(() => {
+        toast.classList.add('hidden');
+      }, 3500);
+    }
+
+    // ==========================================
+    // LÓGICA DEL CHATBOT INTELIGENTE GEMINI (IA)
+    // ==========================================
+    function toggleChatWidget() {
+      const widget = document.getElementById('chat-widget-box');
+      widget.classList.toggle('hidden');
+    }
+
+    function handleChatKeyDown(event) {
+      if (event.key === 'Enter') {
+        sendChatMessage();
+      }
+    }
+
+    async function sendChatMessage() {
+      const input = document.getElementById('chat-user-input');
+      const text = input.value.trim();
+      if (!text) return;
+
+      input.value = '';
+      appendMessage(text, 'user');
+
+      // Colocar un indicador de escritura
+      const loadingId = appendMessage('Generando respuesta...', 'bot', true);
+
+      // LLAMADA AL MODELO GEMINI API (CON EXPONENTIAL BACKOFF)
+      try {
+        const reply = await callGeminiAPI(text);
+        removeMessage(loadingId);
+        appendMessage(reply, 'bot');
+      } catch (e) {
+        removeMessage(loadingId);
+        appendMessage("Ups, tuve un problema de conexión. ¿Podrías volver a intentarlo?", 'bot');
+      }
+    }
+
+    function appendMessage(text, sender, isLoading = false) {
+      const container = document.getElementById('chat-messages-container');
+      const id = 'msg-' + Date.now() + Math.random().toString(36).substr(2, 4);
+
+      const msgDiv = document.createElement('div');
+      msgDiv.id = id;
+      if (sender === 'user') {
+        msgDiv.className = "bg-brand-700 text-white p-2.5 rounded-lg max-w-[85%] self-end ml-auto chat-bubble-user border shadow-xs text-right";
+      } else {
+        msgDiv.className = "bg-white text-slate-800 p-2.5 rounded-lg max-w-[85%] chat-bubble-bot border shadow-xs";
+      }
+      
+      msgDiv.innerText = text;
+      container.appendChild(msgDiv);
+      container.scrollTop = container.scrollHeight;
+      return id;
+    }
+
+    function removeMessage(id) {
+      const el = document.getElementById(id);
+      if (el) el.remove();
+    }
+
+    // Integración de Gemini con exponenciales
+    async function callGeminiAPI(prompt) {
+      const systemInstruction = `Eres un asistente inteligente de soporte de Offboarding de Assetplan para el arrendatario Pedro Santana (Depto 1004). 
+      Tu tono debe ser altamente servicial, empático, claro y profesional.
+      Tienes el siguiente contexto del contrato y estado actual:
+      - Arrendatario: Pedro Santana
+      - Unidad: Departamento 1004, Bodega 56, Estacionamiento 108.
+      - Fecha de salida actual configurada en el flujo: ${state.exitDate}.
+      - Si la fecha de aviso está fuera de rango contractual (60 días mínimo), se aplica un cargo proporcional por preaviso faltante de $230.000.
+      - Oficinas de Assetplan para entrega de llaves: Av. Providencia 1204, Oficina 501, Santiago (obligatorio).
+      - El prorrateo corresponde a cobrar solo los días proporcionales que el renter habitó el depto durante el último mes de su salida.
+      - En caso de consultas sobre el reembolso de la garantía (deposit), explica que por ley y contrato la transferencia del saldo final se realiza en un plazo máximo de 15 días hábiles después del Checkout.
+      - Si el arrendatario plantea una queja o algo fuera de tus capacidades, ofrécele crear un ticket de soporte de manera empática.`;
+
+      const apiKey = ""; // Canvas autocompleta la API Key en runtime
+      const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`;
+
+      const payload = {
+        contents: [{ parts: [{ text: prompt }] }],
+        systemInstruction: {
+          parts: [{ text: systemInstruction }]
+        }
+      };
+
+      // Implementar exponentials backoff simples
+      let delay = 1000;
+      for (let attempt = 0; attempt < 3; attempt++) {
+        try {
+          const response = await fetch(apiUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+          if (response.ok) {
+            const data = await response.json();
+            return data.candidates?.[0]?.content?.parts?.[0]?.text || "No obtuve respuesta del modelo.";
+          }
+        } catch (e) {
+          // Silent retry
+        }
+        await new Promise(r => setTimeout(r, delay));
+        delay *= 2;
+      }
+      throw new Error("API Limit");
+    }
+  </script>
+</body>
+</html>
